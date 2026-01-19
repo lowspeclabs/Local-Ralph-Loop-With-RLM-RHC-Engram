@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+ralph_workspace/
+engram_memory/
+*.log
+.DS_Store
+ralph_state_*.json
+current.state.md
+whole.task.md
+todo.md
+_full_spec.md
