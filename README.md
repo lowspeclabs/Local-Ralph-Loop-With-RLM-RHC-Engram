@@ -1,6 +1,6 @@
 # RALPH v0.1
 
-## Recursive Autonomous Loop with Progressive Hacking
+## Recursive Autonomous Loop with RCH Engrams to reduce prompt Window
 
 **Version**: 0.1  
 **Release Date**: 2026-01-19  
