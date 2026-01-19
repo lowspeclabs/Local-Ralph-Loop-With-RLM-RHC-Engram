@@ -36,6 +36,7 @@ CONFIG = {
     'RLM_ONLY_ON_CONFUSION': False,       # If true, RLM only triggers when Ralph is stagnant or erroring
     'HITL_ENABLED': True,                # Pause for user input every turn
     'DEBUG_MODE': False,                 # If False, hide LLM raw output and system prompts
+    'DEFAULT_MODEL_NAME': "local-model", # Default model name for LLM requests
 }
 
 SEPARATOR = "=" * 60
