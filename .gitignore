@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+ralph_workspace/
+ralph_state_*.json
+.venv/

@@ -9,8 +9,6 @@ This implementation provides:
 4. Works with ANY model in LM Studio (no model modification needed)
 """
 
-import torch
-import torch.nn as nn
 import requests
 import json
 from typing import List, Dict, Optional, Tuple
