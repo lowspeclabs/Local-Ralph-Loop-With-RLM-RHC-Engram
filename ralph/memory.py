@@ -97,10 +97,10 @@ class EngramMemoryStore:
         if migrated:
             print("[Engram] Migration complete.")
 
-    def _store_to_db(self, n: int, key: str, value_json: str):
+    def _store_to_db(self, n: int, key: str, value_json: str, conn: Optional[sqlite3.Connection] = None):
         """Directly store to database"""
-        with sqlite3.connect(self.db_path) as conn:
-            conn.execute("""
+        def _execute(c):
+            c.execute("""
                 INSERT INTO ngrams (n, ngram_key, value_json, last_accessed)
                 VALUES (?, ?, ?, ?)
                 ON CONFLICT(n, ngram_key) DO UPDATE SET
@@ -108,7 +108,13 @@ class EngramMemoryStore:
                 hit_count = hit_count + 1,
                 last_accessed = excluded.last_accessed
             """, (n, key, value_json, time.time()))
-            conn.commit()
+            c.commit()
+
+        if conn:
+            _execute(conn)
+        else:
+            with sqlite3.connect(self.db_path) as new_conn:
+                _execute(new_conn)
 
     def _make_ngram_key(self, tokens: List[str], n: int) -> Optional[str]:
         if len(tokens) < n: return None
@@ -117,47 +123,57 @@ class EngramMemoryStore:
     def store(self, context_tokens: List[str], information: str, metadata: Optional[Dict] = None):
         """Store information with batching support"""
         timestamp = time.time()
-        for n in self.ngram_orders:
-            key = self._make_ngram_key(context_tokens, n)
-            if not key: continue
-            
-            # Simple approach: append to pending and flush periodically
-            # For simplicity in this version, we'll just update the existing entry if found
-            # or append to the list of info for that key.
-            
-            existing = self.lookup_key(n, key) or []
-            existing.append({
-                'info': information,
-                'metadata': metadata or {},
-                'timestamp': timestamp,
-                'count': 1
-            })
-            
-            self._store_to_db(n, key, json.dumps(existing))
-            
-            # Update cache if present
-            cache_key = f"{n}:{key}"
-            if cache_key in self.cache:
-                self.cache[cache_key] = existing
+        with sqlite3.connect(self.db_path) as conn:
+            for n in self.ngram_orders:
+                key = self._make_ngram_key(context_tokens, n)
+                if not key: continue
 
-    def lookup_key(self, n: int, key: str) -> Optional[List[Dict]]:
+                # Simple approach: append to pending and flush periodically
+                # For simplicity in this version, we'll just update the existing entry if found
+                # or append to the list of info for that key.
+
+                existing = self.lookup_key(n, key, conn=conn) or []
+                existing.append({
+                    'info': information,
+                    'metadata': metadata or {},
+                    'timestamp': timestamp,
+                    'count': 1
+                })
+
+                self._store_to_db(n, key, json.dumps(existing), conn=conn)
+
+                # Update cache if present
+                cache_key = f"{n}:{key}"
+                if cache_key in self.cache:
+                    self.cache[cache_key] = existing
+
+    def lookup_key(self, n: int, key: str, conn: Optional[sqlite3.Connection] = None) -> Optional[List[Dict]]:
         """Lookup a specific key, checking cache first"""
         cache_key = f"{n}:{key}"
         if cache_key in self.cache:
             self.stats['cache_hits'] += 1
             self.cache.move_to_end(cache_key)
             return self.cache[cache_key]
-        
+
         self.stats['db_reads'] += 1
-        with sqlite3.connect(self.db_path) as conn:
-            cursor = conn.execute("SELECT value_json FROM ngrams WHERE n = ? AND ngram_key = ?", (n, key))
-            row = cursor.fetchone()
-            if row:
-                data = json.loads(row[0])
-                self.cache[cache_key] = data
-                if len(self.cache) > self.max_cache_entries:
-                    self.cache.popitem(last=False)
-                return data
+
+        def _query(c):
+            cursor = c.execute("SELECT value_json FROM ngrams WHERE n = ? AND ngram_key = ?", (n, key))
+            return cursor.fetchone()
+
+        if conn:
+            row = _query(conn)
+        else:
+            with sqlite3.connect(self.db_path) as new_conn:
+                row = _query(new_conn)
+
+        if row:
+            data = json.loads(row[0])
+            self.cache[cache_key] = data
+            if len(self.cache) > self.max_cache_entries:
+                self.cache.popitem(last=False)
+            return data
+
         return None
 
     def lookup(self, tokens: List[str]) -> Dict[int, List[Dict]]:
@@ -165,16 +181,17 @@ class EngramMemoryStore:
         self.stats['lookups'] += 1
         results = {}
         
-        for n in self.ngram_orders:
-            key = self._make_ngram_key(tokens, n)
-            if not key: continue
-            
-            entries = self.lookup_key(n, key)
-            if entries:
-                self.stats['hits'] += 1
-                results[n] = entries
-            else:
-                self.stats['misses'] += 1
+        with sqlite3.connect(self.db_path) as conn:
+            for n in self.ngram_orders:
+                key = self._make_ngram_key(tokens, n)
+                if not key: continue
+
+                entries = self.lookup_key(n, key, conn=conn)
+                if entries:
+                    self.stats['hits'] += 1
+                    results[n] = entries
+                else:
+                    self.stats['misses'] += 1
         
         return results
 
