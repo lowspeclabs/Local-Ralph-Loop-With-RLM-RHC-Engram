@@ -3,6 +3,7 @@ import json
 import time
 import re
 import pickle
+import contextlib
 from pathlib import Path
 from typing import List, Dict, Optional, Any
 from collections import OrderedDict
@@ -86,9 +87,24 @@ class EngramMemoryStore:
                 try:
                     with open(pkl_path, 'rb') as f:
                         data = pickle.load(f)
+
+                    # Batch insert for performance
+                    with contextlib.closing(sqlite3.connect(self.db_path)) as conn:
+                        current_time = time.time()
+                        batch_data = []
                         for key, entries in data.items():
-                            # Entries is a list in the old format
-                            self._store_to_db(n, key, json.dumps(entries))
+                            batch_data.append((n, key, json.dumps(entries), current_time))
+
+                        with conn:
+                            conn.executemany("""
+                                INSERT INTO ngrams (n, ngram_key, value_json, last_accessed)
+                                VALUES (?, ?, ?, ?)
+                                ON CONFLICT(n, ngram_key) DO UPDATE SET
+                                value_json = excluded.value_json,
+                                hit_count = hit_count + 1,
+                                last_accessed = excluded.last_accessed
+                            """, batch_data)
+
                     pkl_path.rename(pkl_path.with_suffix('.pkl.bak'))
                     migrated = True
                 except Exception as e:
