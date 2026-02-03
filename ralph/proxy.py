@@ -70,12 +70,11 @@ class LMStudioEngramProxy:
 
     def chat_completion(self, messages: List[Dict[str, str]], **kwargs) -> Union[Dict, requests.Response]:
         """Send chat completion request with Engram memory augmentation."""
-        import copy
         _t_start = time.time()
         _timings = {}
         
         # Work on a copy to prevent persistent injection bloat in history
-        local_messages = copy.deepcopy(messages)
+        local_messages = [m.copy() for m in messages]
         user_message = next((msg['content'] for msg in reversed(local_messages) if msg['role'] == 'user'), None)
         
         if user_message and self.injection_method != 'none':
