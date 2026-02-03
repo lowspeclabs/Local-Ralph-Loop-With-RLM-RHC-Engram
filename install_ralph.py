@@ -101,24 +101,40 @@ def main():
     
     # Step 4: Install dependencies
     print_header("Step 4: Installing Dependencies")
-    
-    dependencies = [
-        "requests>=2.28.0",
-    ]
-    
-    print("Required packages:")
-    for dep in dependencies:
-        print(f"  - {dep}")
-    print()
-    
-    for dep in dependencies:
+
+    # Check for requirements.txt
+    requirements_file = script_dir / "requirements.txt"
+    if requirements_file.exists():
+        print(f"Installing from {requirements_file.name}...")
         if not run_command(
-            f"{pip_path} install {dep}",
-            f"Installing {dep}",
+            f"{pip_path} install -r {requirements_file.name}",
+            "Installing dependencies from requirements.txt",
             cwd=script_dir
         ):
-            print(f"\n✗ Failed to install {dep}")
+            print("\n✗ Failed to install dependencies")
             sys.exit(1)
+    else:
+        # Fallback to manual list if requirements.txt is missing
+        print("⚠️  requirements.txt not found. Using fallback list.")
+        dependencies = [
+            "requests>=2.28.0",
+            "duckduckgo-search",
+            "trafilatura"
+        ]
+
+        print("Required packages:")
+        for dep in dependencies:
+            print(f"  - {dep}")
+        print()
+
+        for dep in dependencies:
+            if not run_command(
+                f"{pip_path} install {dep}",
+                f"Installing {dep}",
+                cwd=script_dir
+            ):
+                print(f"\n✗ Failed to install {dep}")
+                sys.exit(1)
     
     # Step 5: Verify installation
     print_header("Step 5: Verifying Installation")

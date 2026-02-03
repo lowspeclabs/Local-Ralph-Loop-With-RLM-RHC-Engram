@@ -1,7 +1,7 @@
 import argparse
 import sys
 from pathlib import Path
-from ralph import EngramMemoryStore, LMStudioEngramProxy, EngramRalphLoop
+from ralph import EngramMemoryStore, LMStudioEngramProxy, EngramRalphLoop, CONFIG
 
 def main():
     parser = argparse.ArgumentParser(description="RALPH: Scalable Autonomous Agent")
@@ -10,7 +10,7 @@ def main():
     parser.add_argument("--url", type=str, default="http://localhost:1234", help="LM Studio URL")
     parser.add_argument("--iterations", type=int, default=50, help="Max iterations")
     parser.add_argument("--storage", type=str, default="./engram_memory", help="Memory storage path")
-    parser.add_argument("--model", type=str, default="local-model", help="Model name")
+    parser.add_argument("--model", type=str, default=CONFIG.get("DEFAULT_MODEL_NAME", "local-model"), help="Model name")
     parser.add_argument("--deep-thought", action="store_true", help="Enable Recursive Layered Model (RLM)")
     parser.add_argument("--thinking-level", type=int, choices=range(1, 6), default=1, help="Recursion depth for RLM (1-5)")
     parser.add_argument("--hitl", action="store_true", help="Enable Human-in-the-Loop mode")

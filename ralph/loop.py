@@ -13,11 +13,11 @@ from .config import CONFIG, DEFAULT_SYSTEM_PROMPT, SEPARATOR
 class EngramRalphLoop:
     """Autonomous RALPH agent loop with observation windowing."""
     
-    def __init__(self, goal: str, proxy: LMStudioEngramProxy, model: str = "local-model", max_iterations: int = 10, workspace_dir: str = None, rlm_enabled: bool = None, rlm_depth: int = None, hitl_enabled: bool = None, debug_mode: bool = None):
+    def __init__(self, goal: str, proxy: LMStudioEngramProxy, model: str = None, max_iterations: int = 10, workspace_dir: str = None, rlm_enabled: bool = None, rlm_depth: int = None, hitl_enabled: bool = None, debug_mode: bool = None):
         self.goal = goal
         self.brief_goal = self._extract_brief_goal(goal)
         self.proxy = proxy
-        self.model = model
+        self.model = model or CONFIG.get('DEFAULT_MODEL_NAME', "local-model")
         self.max_iterations = max_iterations
         self.workspace = Path(workspace_dir or CONFIG['WORKSPACE_DIR']).resolve()
         self.workspace.mkdir(parents=True, exist_ok=True)

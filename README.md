@@ -39,7 +39,7 @@ source .venv/bin/activate  # Linux/Mac
 
 # Install dependencies
 pip install --upgrade pip
-pip install requests
+pip install -r requirements.txt
 
 # Verify installation
 python3 quick_check.py
@@ -49,6 +49,8 @@ python3 quick_check.py
 
 - Python 3.8 or higher
 - `requests` library (for LLM API calls)
+- `duckduckgo-search` (for web search)
+- `trafilatura` (for reading web content)
 - LM Studio or compatible API server
 
 ---
